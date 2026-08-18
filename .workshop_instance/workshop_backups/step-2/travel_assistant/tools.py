@@ -1,4 +1,3 @@
-"""TODO: implement get_weather, get_local_time, convert_currency per docs/steps/02-tools.md"""
 # travel_assistant/tools.py
 from datetime import datetime
 from zoneinfo import ZoneInfo
