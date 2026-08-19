@@ -5,7 +5,7 @@ import os
 
 from agent_framework import Agent
 from agent_framework.foundry import FoundryChatClient
-from agent_framework_foundry_hosting import ResponsesHostServer
+from agent_framework_foundry_hosting import FoundryToolbox, ResponsesHostServer  # <-- add FoundryToolbox
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 # travel_assistant/main.py
@@ -20,6 +20,19 @@ def main() -> None:
         project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
         model=os.environ["AZURE_AI_MODEL_DEPLOYMENT_NAME"],
         credential=DefaultAzureCredential(),
+
+        client = FoundryChatClient(
+            project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+            model=os.environ["AZURE_AI_MODEL_DEPLOYMENT_NAME"],
+            credential=credential,                # <-- reuse the same credential
+    ),
+
+    # FoundryToolbox resolves the toolbox endpoint from the environment
+    # (TOOLBOX_ENDPOINT, or FOUNDRY_PROJECT_ENDPOINT + TOOLBOX_NAME), authenticates
+    # every request with the credential, and transparently forwards the platform
+    # per-request call-id to the toolbox. The hosting server enters the agent, which
+    # connects the toolbox on first use and closes it at shutdown.
+    toolbox = FoundryToolbox(credential)
     )
 
     # TODO: write TravelBuddy's system instructions. Describe a friendly travel
@@ -37,22 +50,24 @@ def main() -> None:
             "payment methods, and connectivity advice when useful.Keep responses clear, " \
             "actionable, and easy to skim. Ask only the most important clarifying questions " \
             "when essential details are missing." \
-            "Use the OctoTrip Flights MCP server when the traveler asks about " \
-            "flights, routes, fares, or schedules; pass IATA airport codes and a " \
-            "departure date (YYYY-MM-DD) — if the traveler doesn't give one, call " \
-            "get_local_time and use the date part of its iso_time as today's date — " \
-            "and summarize the options you find.",
+#            "Use the OctoTrip Flights MCP server when the traveler asks about " \
+#            "flights, routes, fares, or schedules; pass IATA airport codes and a " \
+#            "departure date (YYYY-MM-DD) — if the traveler doesn't give one, call " \
+#            "get_local_time and use the date part of its iso_time as today's date — " \
+#            "and summarize the options you find." \
+            "Use the Foundry Toolbox for flight search (when the traveler gives no "
+            "departure date, call get_local_time and use the date part of its "
+            "iso_time as today's date), for web search of current "
+            "travel advisories and events, and for Code Interpreter to analyze an "
+            "uploaded itinerary.csv (budget totals, currency conversion, charts)."
+               "" ,
         # History is managed by the hosting infrastructure, so don't store it server-side.
-        tools = [
-            get_weather,        # <-- kept from Step 2
-            get_local_time,     # <-- kept from Step 2
-            convert_currency,   # <-- kept from Step 2
-            client.get_mcp_tool(                          # <-- add this entry
-                name=os.environ["MCP_SERVER_LABEL"],
-                url=os.environ["MCP_SERVER_URL"],
-                approval_mode="never_require",
-            ),
-        ],
+    tools = [
+        get_weather,        # <-- kept from Step 2
+        get_local_time,     # <-- kept from Step 2
+        convert_currency,   # <-- kept from Step 2
+        toolbox,            # <-- replaces the Step 3 client.get_mcp_tool(...) entry
+    ],
         default_options={"store": False},
     )
 
