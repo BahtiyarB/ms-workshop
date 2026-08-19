@@ -1,7 +1,9 @@
 # travel_assistant/main.py
+import logging
 import os
 
 from agent_framework import Agent
+from agent_framework.azure import AzureAISearchContextProvider
 from agent_framework.foundry import FoundryChatClient
 from agent_framework_foundry_hosting import FoundryToolbox, ResponsesHostServer
 from azure.identity import DefaultAzureCredential
@@ -10,6 +12,8 @@ from dotenv import load_dotenv
 from tools import convert_currency, get_local_time, get_weather
 
 load_dotenv(override=True)
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> None:
@@ -21,11 +25,9 @@ def main() -> None:
         credential=credential,
     )
 
-    # FoundryToolbox resolves the toolbox endpoint from the environment
-    # (TOOLBOX_ENDPOINT, or FOUNDRY_PROJECT_ENDPOINT + TOOLBOX_NAME), authenticates
-    # every request with the credential, and transparently forwards the platform
-    # per-request call-id to the toolbox. The hosting server enters the agent, which
-    # connects the toolbox on first use and closes it at shutdown.
+    # FoundryToolbox reads TOOLBOX_ENDPOINT from the environment, authenticates
+    # every request with the credential, and connects on first use. The toolbox
+    # bundles web search, Code Interpreter, and the OctoTrip flights MCP server.
     toolbox = FoundryToolbox(credential)
 
     tools = [
@@ -33,6 +35,21 @@ def main() -> None:
         get_local_time,
         convert_currency,
         toolbox,
+    ]
+
+    # RAG: search the destinations index before each turn and inject the top
+    # matches into model context.
+    search_endpoint = os.environ["AZURE_AI_SEARCH_ENDPOINT"]
+    search_index_name = os.environ["AZURE_AI_SEARCH_INDEX_NAME"]
+    context_providers = [
+        AzureAISearchContextProvider(
+            source_id="travelbuddy_destinations",
+            endpoint=search_endpoint,
+            index_name=search_index_name,
+            credential=credential,
+            mode="semantic",
+            top_k=3,
+        )
     ]
 
     agent = Agent(
@@ -48,9 +65,12 @@ def main() -> None:
             "departure date, call get_local_time and use the date part of its "
             "iso_time as today's date), for web search of current "
             "travel advisories and events, and for Code Interpreter to analyze an "
-            "uploaded itinerary.csv (budget totals, currency conversion, charts)."
+            "uploaded itinerary.csv (budget totals, currency conversion, charts). "
+            "Use the grounded destination context when relevant; if the destinations "
+            "index does not contain enough detail, say what is missing."
         ),
         tools=tools,
+        context_providers=context_providers,
         default_options={"store": False},
     )
 

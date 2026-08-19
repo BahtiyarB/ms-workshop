@@ -11,6 +11,8 @@ services:
         env:
             AZURE_AI_MODEL_DEPLOYMENT_NAME: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}
             AZURE_AI_PROJECT_ENDPOINT: ${AZURE_AI_PROJECT_ENDPOINT}
+            AZURE_AI_SEARCH_ENDPOINT: ${AZURE_AI_SEARCH_ENDPOINT}
+            AZURE_AI_SEARCH_INDEX_NAME: ${AZURE_AI_SEARCH_INDEX_NAME}
             TOOLBOX_ENDPOINT: ${TOOLBOX_ENDPOINT}
             WORKSHOP_RESOURCE_PREFIX: ${WORKSHOP_RESOURCE_PREFIX}
         codeConfiguration:
@@ -22,7 +24,7 @@ services:
                 cpu: "0.5"
                 memory: 1Gi
         description: |
-            TravelBuddy is an Agent Framework hosted agent with local Python function tools for weather, local time, and currency, plus a Foundry Toolbox that bundles web search, Code Interpreter, and the OctoTrip flights MCP server behind one project-managed endpoint.
+            TravelBuddy is an Agent Framework hosted agent with local Python function tools for weather, local time, and currency, a Foundry Toolbox that bundles web search, Code Interpreter, and the OctoTrip flights MCP server, and RAG grounding over a curated destinations index in Azure AI Search.
         kind: hosted
         metadata:
             tags:
@@ -34,6 +36,7 @@ services:
                 - Function Tools
                 - MCP Tools
                 - Toolbox Tools
+                - RAG
             tool_declarations:
                 - description: Returns mock destination weather for a city and optional date.
                   name: get_weather
@@ -55,6 +58,11 @@ services:
                   endpoint: ${TOOLBOX_ENDPOINT}
                   name: travel-toolbox
                   type: toolbox
+                - description: |
+                    Azure AI Search retrieval over the curated destinations index; injects the top-k matching destination records into context before each turn.
+                  endpoint: ${AZURE_AI_SEARCH_ENDPOINT}
+                  name: travelbuddy_destinations
+                  type: azure_ai_search
         name: foundry-workshop-travel-buddy
         protocols:
             - protocol: responses
