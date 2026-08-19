@@ -37,6 +37,7 @@ services:
                 - MCP Tools
                 - Toolbox Tools
                 - RAG
+                - Skills
             tool_declarations:
                 - description: Returns mock destination weather for a city and optional date.
                   name: get_weather
@@ -63,6 +64,10 @@ services:
                   endpoint: ${AZURE_AI_SEARCH_ENDPOINT}
                   name: travelbuddy_destinations
                   type: azure_ai_search
+                - description: |
+                    Local Skill that renders a grounded, downloadable PDF travel guide (with a day-by-day itinerary) via scripts/create_travel_guide.py.
+                  name: travel-guide
+                  type: skill
         name: foundry-workshop-travel-buddy
         protocols:
             - protocol: responses

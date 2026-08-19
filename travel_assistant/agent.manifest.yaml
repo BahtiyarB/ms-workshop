@@ -13,7 +13,7 @@ description: >
   Code Interpreter, and the OctoTrip flights MCP server, and RAG grounding over a
   curated destinations index in Azure AI Search.
 metadata:
-  tags: [Agent Framework, AI Agent Hosting, Azure AI AgentServer, Responses Protocol, Travel Assistant, Function Tools, MCP Tools, Toolbox Tools, RAG]
+  tags: [Agent Framework, AI Agent Hosting, Azure AI AgentServer, Responses Protocol, Travel Assistant, Function Tools, MCP Tools, Toolbox Tools, RAG, Skills]
   tool_declarations:
     - name: get_weather
       description: Returns mock destination weather for a city and optional date.
@@ -42,6 +42,11 @@ metadata:
         top-k matching destination records into context before each turn.
       type: azure_ai_search
       endpoint: ${AZURE_AI_SEARCH_ENDPOINT}
+    - name: travel-guide
+      description: >
+        Local Skill that renders a grounded, downloadable PDF travel guide (with a
+        day-by-day itinerary) via scripts/create_travel_guide.py.
+      type: skill
 template:
   name: travel-buddy
   kind: hosted
